@@ -209,23 +209,13 @@ module With_mask = struct
   let question_answering vs (config : Config.t) ~qa_dropout_p =
     let model = model vs config in
     let qa_outputs =
-      Layer.linear Var_store.(vs / "qua_outputs") ~input_dim:config.dim 2
+      Layer.linear Var_store.(vs / "qa_outputs") ~input_dim:config.dim 2
     in
     fun xs ~mask ~is_training ->
-      let logits =
-        model xs ~mask ~is_training
-        |> fst
-        |> Tensor.dropout ~p:qa_dropout_p ~is_training
-        |> Tensor.select ~dim:1 ~index:0
-        |> Layer.forward qa_outputs
-        |> Tensor.split ~split_size:1 ~dim:(-1)
-      in
-      match logits with
-      | [ start_logits; end_logits ] ->
-        let start_logits = Tensor.squeeze1 start_logits ~dim:(-1) in
-        let end_logits = Tensor.squeeze1 end_logits ~dim:(-1) in
-        start_logits, end_logits
-      | _ -> assert false
+      model xs ~mask ~is_training
+      |> fst
+      |> Tensor.dropout ~p:qa_dropout_p ~is_training
+      |> Layer.forward qa_outputs
 end
 
 let model vs config =
@@ -242,7 +232,7 @@ let classifier vs config ~num_labels ~classifier_dropout_p =
 
 let question_answering vs config ~qa_dropout_p =
   let qa = With_mask.question_answering vs config ~qa_dropout_p in
-  fun xs ~is_training -> qa xs ~mask:None ~is_training
+  Layer.of_fn_ (fun xs ~is_training -> qa xs ~mask:None ~is_training)
 
 let%expect_test "tensor" =
   let t = Tensor.of_int0 42 in

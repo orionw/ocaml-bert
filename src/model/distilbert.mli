@@ -39,10 +39,9 @@ val classifier
   -> classifier_dropout_p:float
   -> Layer.t_with_training
 
-val question_answering
+  val question_answering
   :  Var_store.t
   -> Config.t
   -> qa_dropout_p:float
-  -> Tensor.t
-  -> is_training:bool
-  -> Tensor.t * Tensor.t
+  -> Layer.t_with_training
+
